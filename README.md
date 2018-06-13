@@ -4,31 +4,23 @@
 
 RISCVEMU是一个RISC-V架构的模拟器。它的目的是在保持完整的基础上实现一个小的简单的模拟器。
 
-docs：存放了所有的学习笔记和文档。
-
-diskimg：存放了在虚拟机上运行所需的镜像。
+- docs：存放了所有的学习笔记和文档。
+- diskimg：存放了在虚拟机上运行所需的镜像。
 
 #### 编译
 
 ```shell
-wget https://bellard.org/riscvemu/riscvemu-2017-08-06.tar.gz
-tar zxvf riscvemu-XXX.tar.gz
-cd riscvemu-XXX
-vim Makefile	# 删除-Werror
+# 对于ubuntu18.04，安装编译所需的库
+sudo apt install libcurl4-gnutls-dev libssl-dev libsdl1.2-dev libc6	
+git clone https://github.com/shzhxh/riscv_computer.git
+cd riscv_computer
 make
+sudo make install	# 可选，将程序装到可执行目录
 ```
-
-##### 问题解决
-
-- `fatal error: curl/multi.h: No such file or directory`
-
-  缺少库，对于ubuntu18.04，应安装`sudo apt install libcurl4-gnutls-dev`
 
 #### 运行
 
 ```
-wget https://bellard.org/riscvemu/diskimage-linux-riscv-2017-08-06.2.tar.gz
-tar zxvf diskimg-linux-riscv-XXX.tar.gz
-./riscvemu diskimg-linux-riscv-XXX/root-riscv64.cfg
+./riscvemu diskimg/root-riscv64.cfg
 ```
 
