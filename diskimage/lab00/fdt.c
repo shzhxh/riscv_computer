@@ -48,7 +48,6 @@ static uint32_t *fdt_scan_helper(
         break;
       }
       case FDT_PROP: {
-        assert (!last);
         prop.name  = strings + bswap(lex[2]);
         prop.len   = bswap(lex[1]);
         prop.value = lex + 3;
@@ -170,7 +169,6 @@ static void mem_done(const struct fdt_scan_node *node, void *extra)
   uintptr_t self = (uintptr_t)mem_done;
 
   if (!scan->memory) return;
-  assert (scan->reg_value && scan->reg_len % 4 == 0);
 
   while (end - value > 0) {
     uint64_t base, size;
@@ -178,7 +176,6 @@ static void mem_done(const struct fdt_scan_node *node, void *extra)
     value = fdt_get_size   (node->parent, value, &size);
     if (base <= self && self <= base + size) { mem_size = size; }
   }
-  assert (end == value);
 }
 
 void query_mem(uintptr_t fdt)
@@ -194,7 +191,6 @@ void query_mem(uintptr_t fdt)
 
   mem_size = 0;
   fdt_scan(fdt, &cb);
-  assert (mem_size > 0);
 }
 
 ///////////////////////////////////////////// HART SCAN //////////////////////////////////////////
@@ -226,10 +222,8 @@ static void hart_prop(const struct fdt_scan_prop *prop, void *extra)
 {
   struct hart_scan *scan = (struct hart_scan *)extra;
   if (!strcmp(prop->name, "device_type") && !strcmp((const char*)prop->value, "cpu")) {
-    assert (!scan->cpu);
     scan->cpu = prop->node;
   } else if (!strcmp(prop->name, "interrupt-controller")) {
-    assert (!scan->controller);
     scan->controller = prop->node;
   } else if (!strcmp(prop->name, "#interrupt-cells")) {
     scan->cells = bswap(prop->value[0]);
@@ -247,12 +241,9 @@ static void hart_done(const struct fdt_scan_node *node, void *extra)
   struct hart_scan *scan = (struct hart_scan *)extra;
 
   if (scan->cpu == node) {
-    assert (scan->hart >= 0);
   }
 
   if (scan->controller == node && scan->cpu) {
-    assert (scan->phandle > 0);
-    assert (scan->cells == 1);
 
     if (scan->hart < MAX_HARTS) {
       hart_phandles[scan->hart] = scan->phandle;
@@ -286,7 +277,6 @@ void query_harts(uintptr_t fdt)
   fdt_scan(fdt, &cb);
 
   // The current hart should have been detected
-  assert ((hart_mask >> read_csr(mhartid)) != 0);
 }
 
 ///////////////////////////////////////////// CLINT SCAN /////////////////////////////////////////
@@ -328,9 +318,6 @@ static void clint_done(const struct fdt_scan_node *node, void *extra)
   const uint32_t *end = value + scan->int_len/4;
 
   if (!scan->compat) return;
-  assert (scan->reg != 0);
-  assert (scan->int_value && scan->int_len % 16 == 0);
-  assert (!scan->done); // only one clint
 
   scan->done = 1;
   mtime = (void*)((uintptr_t)scan->reg + 0xbff8);
@@ -363,7 +350,6 @@ void query_clint(uintptr_t fdt)
 
   scan.done = 0;
   fdt_scan(fdt, &cb);
-  assert (scan.done);
 }
 
 ///////////////////////////////////////////// PLIC SCAN /////////////////////////////////////////
@@ -413,10 +399,6 @@ static void plic_done(const struct fdt_scan_node *node, void *extra)
   const uint32_t *end = value + scan->int_len/4;
 
   if (!scan->compat) return;
-  assert (scan->reg != 0);
-  assert (scan->int_value && scan->int_len % 8 == 0);
-  assert (scan->ndev >= 0 && scan->ndev < 1024);
-  assert (!scan->done); // only one plic
 
   scan->done = 1;
   plic_priorities = (uint32_t*)(uintptr_t)scan->reg;
@@ -438,16 +420,14 @@ static void plic_done(const struct fdt_scan_node *node, void *extra)
         hls->plic_s_ie     = (uintptr_t*)((uintptr_t)scan->reg + ENABLE_BASE + ENABLE_SIZE * index);
         hls->plic_s_thresh = (uint32_t*) ((uintptr_t)scan->reg + HART_BASE   + HART_SIZE   * index);
       } else {
-        printm("PLIC wired hart %d to wrong interrupt %d", hart, cpu_int);
+        putstring("PLIC wired hart to wrong interrupt\n");
       }
     }
     value += 2;
   }
 #if 0
-  printm("PLIC: prio %x devs %d\r\n", (uint32_t)(uintptr_t)plic_priorities, plic_ndevs);
   for (int i = 0; i < MAX_HARTS; ++i) {
     hls_t *hls = OTHER_HLS(i);
-    printm("CPU %d: %x %x %x %x\r\n", i, (uint32_t)(uintptr_t)hls->plic_m_ie, (uint32_t)(uintptr_t)hls->plic_m_thresh, (uint32_t)(uintptr_t)hls->plic_s_ie, (uint32_t)(uintptr_t)hls->plic_s_thresh);
   }
 #endif
 }
@@ -588,8 +568,6 @@ static bool hart_filter_mask(const struct hart_filter *filter)
   if (strcmp(filter->status, "okay")) return true;
   if (!strcmp(filter->mmu_type, "riscv,sv39")) return false;
   if (!strcmp(filter->mmu_type, "riscv,sv48")) return false;
-  printm("hart_filter_mask saw unknown hart type: status=\"%s\", mmu_type=\"%s\"\n",
-         filter->status, filter->mmu_type);
   return true;
 }
 
@@ -598,8 +576,6 @@ static void hart_filter_done(const struct fdt_scan_node *node, void *extra)
   struct hart_filter *filter = (struct hart_filter *)extra;
 
   if (!filter->compat) return;
-  assert (filter->status);
-  assert (filter->hart >= 0);
 
   if (hart_filter_mask(filter)) {
     strcpy(filter->status, "masked");
@@ -618,28 +594,14 @@ struct fdt_print_info {
   const struct fdt_scan_node *stack[FDT_PRINT_MAX_DEPTH];
 };
 
-void fdt_print_printm(struct fdt_print_info *info, const char *format, ...)
-{
-  va_list vl;
-
-  for (int i = 0; i < info->depth; ++i)
-    printm("  ");
-
-  va_start(vl, format);
-  vprintm(format, vl);
-  va_end(vl);
-}
-
 static void fdt_print_open(const struct fdt_scan_node *node, void *extra)
 {
   struct fdt_print_info *info = (struct fdt_print_info *)extra;
 
   while (node->parent != NULL && info->stack[info->depth-1] != node->parent) {
     info->depth--;
-    fdt_print_printm(info, "}\r\n");
   }
 
-  fdt_print_printm(info, "%s {\r\n", node->name);
   info->stack[info->depth] = node;
   info->depth++;
 }
@@ -650,13 +612,12 @@ static void fdt_print_prop(const struct fdt_scan_prop *prop, void *extra)
   int asstring = 1;
   char *char_data = (char *)(prop->value);
 
-  fdt_print_printm(info, "%s", prop->name);
 
   if (prop->len == 0) {
-    printm(";\r\n");
+    putstring(";\r\n");
     return;
   } else {
-    printm(" = ");
+    putstring(" = ");
   }
 
   /* It appears that dtc uses a hueristic to detect strings so I'm using a
@@ -671,20 +632,18 @@ static void fdt_print_prop(const struct fdt_scan_prop *prop, void *extra)
   if (asstring) {
     for (size_t i = 0; i < prop->len; i += strlen(char_data + i) + 1) {
       if (i != 0)
-        printm(", ");
-      printm("\"%s\"", char_data + i);
+        putstring(", ");
     }
   } else {
-    printm("<");
+    putstring("<");
     for (size_t i = 0; i < prop->len/4; ++i) {
       if (i != 0)
-        printm(" ");
-      printm("0x%08x", bswap(prop->value[i]));
+        putstring(" ");
     }
-    printm(">");
+    putstring(">");
   }
 
-  printm(";\r\n");
+  putstring(";\r\n");
 }
 
 static void fdt_print_done(const struct fdt_scan_node *node, void *extra)
@@ -716,7 +675,6 @@ void fdt_print(uintptr_t fdt)
 
   while (info.depth > 0) {
     info.depth--;
-    fdt_print_printm(&info, "}\r\n");
   }
 }
 #endif
