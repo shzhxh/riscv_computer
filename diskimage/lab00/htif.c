@@ -1,7 +1,5 @@
 #include "htif.h"
 #include "atomic.h"
-#include "mtrap.h"
-#include "fdt.h"
 #include <string.h>
 
 volatile extern uint64_t tohost;
