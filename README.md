@@ -10,7 +10,7 @@ RISCVEMU是一个RISC-V架构的模拟器。它的目的是在保持完整的基
 #### 编译
 
 ```shell
-# 对于ubuntu18.04，安装编译所需的库
+# 对于ubuntu18.04或16.04均适用，安装编译所需的库
 sudo apt install libcurl4-gnutls-dev libssl-dev libsdl1.2-dev libc6	
 git clone https://github.com/shzhxh/riscv_computer.git
 cd riscv_computer

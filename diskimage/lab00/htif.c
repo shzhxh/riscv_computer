@@ -1,6 +1,5 @@
 #include "htif.h"
 #include "atomic.h"
-#include <string.h>
 
 volatile extern uint64_t tohost;
 volatile extern uint64_t fromhost;

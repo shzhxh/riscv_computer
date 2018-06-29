@@ -4,8 +4,8 @@
 #include "bits.h"
 
   .section .text.init,"ax",@progbits
-  .globl reset_vector
-reset_vector:
+  .globl _start
+_start:
   j do_reset
 
 #define HTIF_TOHOST   0x40008000
