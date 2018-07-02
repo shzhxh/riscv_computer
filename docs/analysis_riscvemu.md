@@ -45,7 +45,14 @@
 
 - 变量：
 
-  + 结构体p，存储了虚拟机的参数。
+  + 整型ram_size，表示内存大小。
+  + 枚举型drive_mode，表示镜像属性(BF_MODE_RO, BF_MODE_RW, BF_MODE_SNAPSHOT)
+  + 布尔型allow_ctrlc，表示C-C组合键的作用(TRUE停止模拟器，FAUSE发给模拟器)
+  + 字符串cmdline，向内核命令行追加的cmdline。
+  + 整型accel_enable，x86使用VM加速(非0则使用加速，FALSE则禁用加速)
+  + 字符串path，必选的参数：配置文件。
+  + 结构体p(VirtMachineParams)，存储了虚拟机的参数。
+  + 
 
 - 运行流程：
 
@@ -62,13 +69,22 @@
 
 #### 文件结构
 
-- riscvemu.c：抽象的最顶层，主控函数。
+- riscvemu.c：抽象的最顶层
+
+  main：主控函数
+
+  void launch_alternate_executable(char **argv, int xlen)：修改argv[0]为riscvemu+xlen
 
 - machine.c，machine.h：虚拟机的相关功能与定义。
+
 - virtio.c, virtio.h：虚拟机I/O驱动。
+
 - riscv_cpu.c, x86_cpu.c
+
 - riscv_machine.c, x86_machine.c
+
 - ide.c, ps2.c, vmmouse.c, pckbd.c, vga.c
+
 - slirp/*
 
 

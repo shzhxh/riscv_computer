@@ -116,6 +116,10 @@ void __attribute__((format(printf, 1, 2))) vm_error(const char *fmt, ...);
 int vm_get_int(JSONValue obj, const char *name, int *pval);
 
 const char *virt_machine_get_name(void);
+/*
+ * func:virt_machine_set_defaults
+ * initialize memory area of *p to 0
+ */
 void virt_machine_set_defaults(VirtMachineParams *p);
 void virt_machine_load_config_file(VirtMachineParams *p,
                                    const char *filename,
