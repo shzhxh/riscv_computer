@@ -382,7 +382,11 @@ static int load_file(uint8_t **pbuf, const char *filename)
     abort();
 }
 #else
-/* return -1 if error. */
+/*
+ * func:load_file
+ * load the content of *filename to a buffer, then store the pointer of
+ * buffer to *pbuf。return the size of *filename。
+ */
 static int load_file(uint8_t **pbuf, const char *filename)
 {
     FILE *f;
