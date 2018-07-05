@@ -125,5 +125,28 @@
 
 - slirp/*
 
+#### 一些问题
 
+##### 关于配置文件
+
+问题描述：riscvemu里最重要的参数就是配置文件了，期望理解配置文件的详细作用，将其改成类似qemu的参数形式。
+
+在riscvemu.c的main函数里，可见代表配置文件的字符串是赋值给`path`的。对`path`的处理是放在`virt_machine_load_config_file`函数里。
+
+`virt_machine_load_config_file`的实现是在machine.c文件里，配置文件是结构体`VirtMachineParams`里的一项`cfg_filename`，而`VirtMachineParams`是结构体`VMConfigLoadState`里的一项`vm_params`，接下来又调用了`config_load_file`函数，由此看来`virt_machine_load_config_file`只是对`config_load_file`的封装。
+
+`config_load_file`的实现是在machine.c文件里，它把配置文件载入到内存里，然后执行第三个参数代表的函数`config_file_loaded`，由此看来`config_load_file`只是对它第三个参数的封装。
+
+`config_file_loaded`的实现是在machine.c文件里，首先用virt_machine_parse_config函数对配置文件和数据结构VirtMachineParams进行分析，然后通过config_additional_file_load函数来把所有二进制文件载入内存。
+
+virt_machine_parse_config的实现是在machine.c文件里，其执行过程如下：
+
+1. 解析配置文件的内容，以json格式的形式存放在变量cfg中。
+2. 获取配置文件里version的值，它要与模拟器版本匹配，目前模拟器版本为1。
+3. 获取配置文件里machine的值，它要与模拟器代表的机器名一致，可能的机器名有riscv32, riscv64, riscv128。
+4. 获取配置文件里memory_size的值，并将其以M为单位存储在VirtMachineParams的ram_size里。
+5. 获取配置文件里的bios的值，并将其存储在VirtMachineParams的files[VM_FILE_BIOS].filename里。那么这里的bios究竟在VM里起什么作用呢？
+6. 获取配置文件里kernel的值，并将其存储在VirtMachineParams的files[VM_FILE_KERNEL].filename里。
+7. 获取配置文件里cmdline的值，使用comline_subst函数将其保存在VirtMachineParams的cmdline里。
+8. 
 
