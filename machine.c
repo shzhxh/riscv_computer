@@ -221,6 +221,7 @@ static int virt_machine_parse_config(VirtMachineParams *p,
     
     for(;;) {
         snprintf(buf1, sizeof(buf1), "drive%d", p->drive_count);
+
         obj = json_object_get(cfg, buf1);
         if (json_is_undefined(obj))
             break;

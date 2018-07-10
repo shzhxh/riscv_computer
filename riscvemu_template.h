@@ -284,7 +284,7 @@ static void no_inline glue(riscv_cpu_interp, XLEN)(RISCVCPUState *s,
         }
 #if 0
         if (1) {
-            printf("pc=0x"); print_target_ulong(GET_PC()); printf(" insn=%08x\n", insn);
+            printf("\npc=0x"); print_target_ulong(GET_PC()); printf(" insn=%08x\n", insn);
             //            dump_regs(s);
         }
 #endif
@@ -292,6 +292,7 @@ static void no_inline glue(riscv_cpu_interp, XLEN)(RISCVCPUState *s,
         rd = (insn >> 7) & 0x1f;
         rs1 = (insn >> 15) & 0x1f;
         rs2 = (insn >> 20) & 0x1f;
+        printf("--szx-- opcode:%02x\n",opcode);	// szx
         switch(opcode) {
 #ifdef CONFIG_EXT_C
         C_QUADRANT(0)
@@ -790,7 +791,7 @@ static void no_inline glue(riscv_cpu_interp, XLEN)(RISCVCPUState *s,
             if (rd != 0)
                 s->reg[rd] = val;
             JUMP_INSN;
-        case 0x63:
+        case 0x63: /* branch */
             funct3 = (insn >> 12) & 7;
             switch(funct3 >> 1) {
             case 0: /* beq/bne */
@@ -930,7 +931,7 @@ static void no_inline glue(riscv_cpu_interp, XLEN)(RISCVCPUState *s,
                 goto illegal_insn;
             }
             NEXT_INSN;
-        case 0x13:
+        case 0x13: /* op-imm */
             funct3 = (insn >> 12) & 7;
             imm = (int32_t)insn >> 20;
             switch(funct3) {
@@ -1000,7 +1001,7 @@ static void no_inline glue(riscv_cpu_interp, XLEN)(RISCVCPUState *s,
             NEXT_INSN;
 #endif
 #if XLEN >= 128
-        case 0x5b: /* OP-IMM-64 */
+        case 0x5b: /* OP-IMM-64 (szx: custom-2/rv128) */
             funct3 = (insn >> 12) & 7;
             imm = (int32_t)insn >> 20;
             val = s->reg[rs1];
@@ -1028,7 +1029,7 @@ static void no_inline glue(riscv_cpu_interp, XLEN)(RISCVCPUState *s,
                 s->reg[rd] = val;
             NEXT_INSN;
 #endif
-        case 0x33:
+        case 0x33: /* op */
             imm = insn >> 25;
             val = s->reg[rs1];
             val2 = s->reg[rs2];
@@ -1212,7 +1213,7 @@ static void no_inline glue(riscv_cpu_interp, XLEN)(RISCVCPUState *s,
                 s->reg[rd] = val;
             NEXT_INSN;
 #endif
-        case 0x73:
+        case 0x73: /* system */
             funct3 = (insn >> 12) & 7;
             imm = insn >> 20;
             if (funct3 & 4)
@@ -1363,7 +1364,7 @@ static void no_inline glue(riscv_cpu_interp, XLEN)(RISCVCPUState *s,
                 goto illegal_insn;
             }
             NEXT_INSN;
-        case 0x2f:
+        case 0x2f: /* amo */
             funct3 = (insn >> 12) & 7;
 #define OP_A(size)                                                      \
             {                                                           \
@@ -1466,7 +1467,7 @@ static void no_inline glue(riscv_cpu_interp, XLEN)(RISCVCPUState *s,
             NEXT_INSN;
 #if FLEN > 0
             /* FPU */
-        case 0x07: /* fp load */
+        case 0x07: /* load-fp */
             if (s->fs == 0)
                 goto illegal_insn;
             funct3 = (insn >> 12) & 7;
@@ -1506,7 +1507,7 @@ static void no_inline glue(riscv_cpu_interp, XLEN)(RISCVCPUState *s,
             }
             s->fs = 3;
             NEXT_INSN;
-        case 0x27: /* fp store */
+        case 0x27: /* store-fp */
             if (s->fs == 0)
                 goto illegal_insn;
             funct3 = (insn >> 12) & 7;
@@ -1672,7 +1673,7 @@ static void no_inline glue(riscv_cpu_interp, XLEN)(RISCVCPUState *s,
             }
             s->fs = 3;
             NEXT_INSN;
-        case 0x53:
+        case 0x53: /* op-fp */
             if (s->fs == 0)
                 goto illegal_insn;
             imm = insn >> 25;

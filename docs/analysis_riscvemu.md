@@ -96,10 +96,23 @@
   1. 用一个无限的for循环来遍历所有可选的参数，短选项h,b,m，长选项0为help，1～5如注释所标记。
   2. 用变量path保存配置文件。
   3. 函数virt_machine_load_config_file来载入配置文件
-  4. 打开文件与设备
-  5. 函数virt_machine_init初始化虚拟机
-  6. 函数virt_machine_run运行虚拟机
-  7. 函数virt_machine_end释放资源后退出。
+  4. 依据p->tab_drive[i].filename载入drive,保存在p->tab_drive[i].block_dev。
+  5. 依据p->tab_fs[i].filename载入fs，保存在p->tab_ts[i].fs_dev。
+  6. 如果是用户态，则为p->tab_eth[i].net赋值，否则打印错误信息。
+  7. 如果设置了宏CONFIG_SDL，则初始化p->width,p->height，否则初始化p->console
+  8. 函数virt_machine_init初始化虚拟机。即依据p设置好s，随后释放p占用的空间。
+  9. 函数virt_machine_run运行虚拟机。
+  10. 函数virt_machine_end释放资源后退出。
+
+##### 初始化虚拟机
+
+初始化虚拟机是在`virt_machine_init`函数里完成的，即依据VirtMachineParams的值填充RISCVMachine的值，最后返回是的经过强制类型转换后RISCVMachine的值。
+
+1. 为变量RISCVMachine分配内存。
+2. 初始化虚拟机的内存(s->ram_size)，指定内存管理结构体(s->mem_map)。
+3. 初始化CPU状态(s->cpu_state)。
+
+##### 虚拟机运行
 
 #### build_filelist的原理
 
@@ -137,9 +150,9 @@
 
 `config_load_file`的实现是在machine.c文件里，它把配置文件载入到内存里，然后执行第三个参数代表的函数`config_file_loaded`，由此看来`config_load_file`只是对它第三个参数的封装。
 
-`config_file_loaded`的实现是在machine.c文件里，首先用virt_machine_parse_config函数对配置文件和数据结构VirtMachineParams进行分析，然后通过config_additional_file_load函数来把所有二进制文件载入内存。
+`config_file_loaded`的实现是在machine.c文件里，首先用`virt_machine_parse_config`函数对配置文件和数据结构VirtMachineParams进行分析，然后通过`config_additional_file_load`函数来把附加的二进制文件载入内存。
 
-virt_machine_parse_config的实现是在machine.c文件里，其执行过程如下：
+`virt_machine_parse_config`的实现是在machine.c文件里，其执行过程如下：
 
 1. 解析配置文件的内容，以json格式的形式存放在变量cfg中。
 2. 获取配置文件里version的值，它要与模拟器版本匹配，目前模拟器版本为1。
@@ -148,5 +161,9 @@ virt_machine_parse_config的实现是在machine.c文件里，其执行过程如�
 5. 获取配置文件里的bios的值，并将其存储在VirtMachineParams的files[VM_FILE_BIOS].filename里。那么这里的bios究竟在VM里起什么作用呢？
 6. 获取配置文件里kernel的值，并将其存储在VirtMachineParams的files[VM_FILE_KERNEL].filename里。
 7. 获取配置文件里cmdline的值，使用comline_subst函数将其保存在VirtMachineParams的cmdline里。
-8. 
-
+8. 填充VirtMachineParams的tab_drive和drive_count。
+9. 填充VirtMachineParams的tab_fs和fs_count。
+10. 填充VirtMachineParams的tab_eth和eth_count。
+11. 填充VirtMachineParams的display_device和files[VM_FILE_VGA_BIOS]。
+12. 依次获取input_device, accel, rtc_local_time，并赋值给VirtMachineParams的input_device, accel_enable, rtc_local_time。
+13. 释放变量cfg占用的内存，正常退出返回0，不正常退出返回-1.
