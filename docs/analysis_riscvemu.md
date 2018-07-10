@@ -108,11 +108,38 @@
 
 初始化虚拟机是在`virt_machine_init`函数里完成的，即依据VirtMachineParams的值填充RISCVMachine的值，最后返回是的经过强制类型转换后RISCVMachine的值。
 
-1. 为变量RISCVMachine分配内存。
+1. 为变量RISCVMachine分配内存空间。
 2. 初始化虚拟机的内存(s->ram_size)，指定内存管理结构体(s->mem_map)。
 3. 初始化CPU状态(s->cpu_state)。
+4. 使用cpu_register_ram函数分配内存资源。
+5. 设置虚拟机时间(s->rtc_real_time)。
+6. 使用cpu_register_device函数分配设备资源(CLINT, PLIC, HTIF)。
+7. 设置virtio console，即s->common.console_dev和s->virtio_count。
+8. 设置virtio net device，即s->common.net和s->virtio_count。
+9. 设置virtio block device。
+10. 设置virtio filesystem。
+11. 如果设置了p->display_device，则设置s->common.fb_dev。
+12. 如果设置了p->input_device，则设置s->keyboard_dev，s->mouse_dev。
+13. 由copy_kernel函数实现将内核复制到虚拟机的内存中。
 
 ##### 虚拟机运行
+
+virt_machine_run函数是虚拟机运行的顶层函数，真正干活的是riscv_cpu_interp32函数。
+
+1. 设置delay, rfds, wfds, efds, tv
+2. 如果设置了m->console_dev，则设置STDIODevice为m->console->opaque
+3. 如果设置了m->net，则执行m->net->select_fill函数
+4. 函数virt_machine_interp执行了内核二进制文件，调用关系vit_machine_interp --> riscv_cpu_interp --> riscv_cpu_interp32。
+
+riscv_cpu_inerp32(在riscvemu_template.h文件中)函数执行流程。
+
+1. 传入的参数是结构体RISCVCPUState和最大允许执行的周期数n_cycles。
+2. 通过宏GET_PC获取当前虚拟机pc的值。
+3. 通过pc值得到当前指令，保存在变量insn中。
+4. 从insn中分解出各个操作符和操作数。(opcode, rd, rs1, rs2)
+5. 通过opcode来判断执行什么操作。
+6. 如果设置了CONFIG_EXT_C，则表明使用的是压缩指令，则会从insn中分解出funct3，通过funct3来判断执行什么操作。
+7. opcode有lui, auipc, jal, jalr, branch, load, store, op-imm, op-imm-32,  op, op-32, system, misc-mem, amo, load-fp, store-fp, madd, msub, nmsub, nmadd,  op-fp
 
 #### build_filelist的原理
 
