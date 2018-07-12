@@ -292,6 +292,8 @@ static void no_inline glue(riscv_cpu_interp, XLEN)(RISCVCPUState *s,
         rd = (insn >> 7) & 0x1f;
         rs1 = (insn >> 15) & 0x1f;
         rs2 = (insn >> 20) & 0x1f;
+        printf("%8x  ",insn); // szx
+
         switch(opcode) {
 #ifdef CONFIG_EXT_C
         C_QUADRANT(0)
@@ -776,7 +778,7 @@ static void no_inline glue(riscv_cpu_interp, XLEN)(RISCVCPUState *s,
                 s->reg[rd] = (intx_t)(GET_PC() + (int32_t)(insn & 0xfffff000));
             NEXT_INSN;
         case 0x6f: /* jal */
-        	printf("  jal\n");		// szx
+        	printf("  jal\t");		// szx
             imm = ((insn >> (31 - 20)) & (1 << 20)) |
                 ((insn >> (21 - 1)) & 0x7fe) |
                 ((insn >> (20 - 11)) & (1 << 11)) |
@@ -785,6 +787,8 @@ static void no_inline glue(riscv_cpu_interp, XLEN)(RISCVCPUState *s,
             if (rd != 0)
                 s->reg[rd] = GET_PC() + 4;
             s->pc = (intx_t)(GET_PC() + imm);
+            printf("jal reg[%u],%x\n",rd,imm);	// szx
+            printf("**** reg[%u]:%x, pc:%x\n",rd,s->reg[rd],s->pc);
             JUMP_INSN;
         case 0x67: /* jalr */
         	printf("  jalr\n");		// szx
