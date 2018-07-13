@@ -238,6 +238,8 @@ static void no_inline glue(riscv_cpu_interp, XLEN)(RISCVCPUState *s,
             goto the_end;
         }
         if (unlikely(code_ptr >= code_end)) {
+        	printf("-- szx code_ptr:%x, code_end:%x\n",code_ptr,code_end);	// szx
+        	printf("--1");	//szx
             uint32_t tlb_idx;
             uint16_t insn_high;
             uintptr_t mem_addend;
@@ -247,7 +249,9 @@ static void no_inline glue(riscv_cpu_interp, XLEN)(RISCVCPUState *s,
 
             /* check pending interrupts */
             if (unlikely((s->mip & s->mie) != 0)) {
+            	printf("2(mip:%x,mie:%x)",s->mip,s->mie);	//szx
                 if (raise_interrupt(s)) {
+                	printf("0");	//szx
                     goto the_end;
                 }
             }
@@ -255,9 +259,11 @@ static void no_inline glue(riscv_cpu_interp, XLEN)(RISCVCPUState *s,
             addr = s->pc;
             tlb_idx = (addr >> PG_SHIFT) & (TLB_SIZE - 1);
             if (likely(s->tlb_code[tlb_idx].vaddr == (addr & ~PG_MASK))) {
+            	printf("3");	// szx
                 /* TLB match */ 
                 mem_addend = s->tlb_code[tlb_idx].mem_addend;
             } else {
+            	printf("0");	// szx
                 if (unlikely(target_read_insn_slow(s, &mem_addend, addr)))
                     goto mmu_exception;
             }
@@ -266,18 +272,24 @@ static void no_inline glue(riscv_cpu_interp, XLEN)(RISCVCPUState *s,
                                    (uintptr_t)((addr & ~PG_MASK) + PG_MASK - 1));
             code_to_pc_addend = addr - (uintptr_t)code_ptr;
             if (unlikely(code_ptr >= code_end)) {
+            	printf("4");	// szx
                 /* instruction is potentially half way between two
                    pages ? */
                 insn = *(uint16_t *)code_ptr;
                 if ((insn & 3) == 3) {
+                	printf("5");//szx
                     /* instruction is half way between two pages */
-                    if (unlikely(target_read_insn_u16(s, &insn_high, addr + 2)))
+                    if (unlikely(target_read_insn_u16(s, &insn_high, addr + 2))){
+                    	printf("6");	// szx
                         goto mmu_exception;
+                    }
                     insn |= insn_high << 16;
                 }
             } else {
+            	printf("0");
                 insn = get_insn32(code_ptr);
             }
+            printf("--");	// szx
         } else {
             /* fast path */
             insn = get_insn32(code_ptr);
@@ -292,7 +304,11 @@ static void no_inline glue(riscv_cpu_interp, XLEN)(RISCVCPUState *s,
         rd = (insn >> 7) & 0x1f;
         rs1 = (insn >> 15) & 0x1f;
         rs2 = (insn >> 20) & 0x1f;
-        printf("%8x  ",insn); // szx
+        // szx
+        if((s->mcause!=0)){
+        	printf("\n--mcause:%x\n",s->mcause);
+        }
+        printf("%8x  %8x  ",code_ptr,insn); // szx
 
         switch(opcode) {
 #ifdef CONFIG_EXT_C
@@ -788,7 +804,7 @@ static void no_inline glue(riscv_cpu_interp, XLEN)(RISCVCPUState *s,
                 s->reg[rd] = GET_PC() + 4;
             s->pc = (intx_t)(GET_PC() + imm);
             printf("jal reg[%u],%x\n",rd,imm);	// szx
-            printf("**** reg[%u]:%x, pc:%x\n",rd,s->reg[rd],s->pc);
+            printf("**** reg[%u]:%x, pc:%x, mtvec:%x \n",rd,s->reg[rd],s->pc,s->mtvec);
             JUMP_INSN;
         case 0x67: /* jalr */
         	printf("  jalr\n");		// szx
