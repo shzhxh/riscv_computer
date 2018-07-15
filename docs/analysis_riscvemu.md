@@ -134,12 +134,19 @@ virt_machine_run函数是虚拟机运行的顶层函数，真正干活的是risc
 riscv_cpu_inerp32(在riscvemu_template.h文件中)函数执行流程。
 
 1. 传入的参数是结构体RISCVCPUState和最大允许执行的周期数n_cycles。
-2. 通过宏GET_PC获取当前虚拟机pc的值。
-3. 通过pc值得到当前指令，保存在变量insn中。
-4. 从insn中分解出各个操作符和操作数。(opcode, rd, rs1, rs2)
-5. 通过opcode来判断执行什么操作。
-6. 如果设置了CONFIG_EXT_C，则表明使用的是压缩指令，则会从insn中分解出funct3，通过funct3来判断执行什么操作。
-7. opcode有lui, auipc, jal, jalr, branch, load, store, op-imm, op-imm-32,  op, op-32, system, misc-mem, amo, load-fp, store-fp, madd, msub, nmsub, nmadd,  op-fp
+2. s->insn_counter是指令计数器，insn_counter_addend是指令计数器允许的最大值。
+3. 如果发生了中断，则在raise_inerrupt函数里处理中断。
+4. 用一个循环体来模拟指令执行。
+   1. 如果--n_cycles为0则周期数用完，退出指令执行。
+   2. 如果code_ptr>=code_end，则表明发生了跳转、分支或system类指令。
+      - 如果(s->mip & s->mie) != 0，则表明有要处理的中断，由raise_interrupt函数来处理此中断。
+      - 重新为code_ptr和code_end赋值。
+      - 如果依然code_ptr>=code_end，则可能是指令跨页了。
+   3. 否则code_ptr<code_end，则表明这是正常的指令流，通过code_ptr值得到当前指令，保存在变量insn中。
+   4. 从insn中分解出各个操作符和操作数。(opcode, rd, rs1, rs2)
+   5. 通过opcode来判断执行什么操作。
+   6. 如果设置了CONFIG_EXT_C，则表明使用的是压缩指令，则会从insn中分解出funct3，通过funct3来判断执行什么操作。
+   7. opcode依次是lui, auipc, jal, jalr, branch, load, store, op-imm, op-imm-32,  op, op-32, system, misc-mem, amo, load-fp, store-fp, madd, msub, nmsub, nmadd,  op-fp
 
 #### build_filelist的原理
 
