@@ -1373,7 +1373,6 @@ static void raise_exception2(RISCVCPUState *s, uint32_t cause,
 
 static void raise_exception(RISCVCPUState *s, uint32_t cause)
 {
-	printf("------------szx raise_exception-----------\n");	// szx
     raise_exception2(s, cause, 0);
 }
 
